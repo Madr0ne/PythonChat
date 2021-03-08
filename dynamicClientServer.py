@@ -7,6 +7,31 @@ from random import randint
 SOCKET = 50001
 
 
+def scan(network_address, port):
+    threads = []
+    con_list = []
+
+    def __do_scan(first_three, start):
+        for i in range(start, start + 15):
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.settimeout(0.1)
+
+            if not sock.connect_ex((f'{first_three}.{i}', port)):
+                con_list.append(sock)
+        return
+
+    for i in range(255):
+        for j in range(0, 256, 16):
+            t = threading.Thread(target=__do_scan, args=(f'{network_address}.{i}', j))
+            threads.append(t)
+            t.start()
+
+    for thread in threads:
+        thread.join()
+    return con_list
+
+
 def update_peers(peer_data):
     p2p.peers = str(peer_data, 'utf-8').split(",")[:-1]
 
