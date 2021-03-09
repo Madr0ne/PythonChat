@@ -1,5 +1,3 @@
-# p2p Chat App
+# PythonChat
 
-9 March 2021
-CSC 317 Computer Networks at Cornell College
-by Dominic Pancella, Liam McCormick, and Marcus Quirk
+Poop
