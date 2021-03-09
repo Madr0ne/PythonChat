@@ -21,7 +21,7 @@ def scan(host_ip, port, host_name):
 
             if not sock.connect_ex((f'{first_three}.{k}', port)):
                 sock.settimeout(None)
-                sock.sendall(f'{host_name} has joined the chat\n'.encode())
+                sock.sendall(f'{host_name} has joined the chat'.encode())
                 con_list.append(sock)
         return
 
@@ -46,7 +46,6 @@ class SendThread(threading.Thread):
         while True:
             message = input()
             if message == '\\q':
-                self.client.broadcast(f'{self.client.name} has left the chat.\n')
                 print('Goodbye!')
                 os._exit(0)
             else:
@@ -54,23 +53,11 @@ class SendThread(threading.Thread):
                 print(f'\r{self.client.name}: ', end='')
 
 
-def listen_for_peers(client):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    sock.bind((client.ip, client.port))
-    sock.listen(1)
-    while True:
-        connection, address = sock.accept()
-        client.peer_list.append(connection)
-        receiver = ReceiveThread(connection, client.name)
-        receiver.start()
-
-
 class Client:
     def __init__(self, ip, port, client_name):
         self.ip = ip
         self.port = port
-        self.peer_list = []
+        self.peer_list = scan(ip, port, client_name)
         self.name = client_name
 
     def broadcast(self, message):
@@ -81,6 +68,7 @@ class Client:
                 self.peer_list.remove(peer)
 
     def start(self):
+        print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
         for peer in self.peer_list:
             receiver = ReceiveThread(peer, self.name)
             receiver.start()
@@ -88,12 +76,15 @@ class Client:
         send = SendThread(self)
         send.start()
 
-        T = threading.Thread(target = listen_for_peers, args = (self,))
-        T.start()
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-        self.peer_list += scan(self.ip, self.port, self.name)
-        print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
-
+        sock.bind((self.ip, self.port))
+        sock.listen(1)
+        while True:
+            connection, address = sock.accept()
+            self.peer_list.append(connection)
+            receiver = ReceiveThread(connection, self.name)
+            receiver.start()
 
 
 class ReceiveThread(threading.Thread):
