@@ -25,7 +25,7 @@ def scan(host_ip, port, host_name):
                 con_list.append(sock)
         return
 
-    print('beginning scan')
+    print('Beginning scan...')
     for i in range(255):
         for j in range(0, 256, 16):
             t = threading.Thread(target=__do_scan, args=(f'{network_address}.{i}', j))
@@ -33,7 +33,7 @@ def scan(host_ip, port, host_name):
             t.start()
     for thread in threads:
         thread.join()
-    print('scan complete')
+    print('Scan complete.')
     return con_list
 
 
@@ -124,7 +124,7 @@ def get_host_ip():
 def __main__():
     port = 42069
 
-    name = input("Enter name: ")
+    name = input("Enter a name to chat: ")
     try:
         client = Client(get_host_ip(), port, name)
         client.start()
