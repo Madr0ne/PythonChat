@@ -1,8 +1,6 @@
 import socket
 import threading
 import sys
-import time
-from random import randint
 import re
 
 
@@ -12,7 +10,7 @@ def scan(host_ip, port, host_name):
     network_address = re.search('\d+\.\d+', host_ip).group()
 
     def __do_scan(first_three, start):
-        for k in range(start, start + 15):
+        for k in range(start, start + 7):
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.settimeout(0.05)
@@ -25,10 +23,14 @@ def scan(host_ip, port, host_name):
 
     print('beginning scan')
     for i in range(255):
-        for j in range(0, 256, 16):
+        for j in range(0, 256, 8):
             t = threading.Thread(target=__do_scan, args=(f'{network_address}.{i}', j))
+            try:
+                t.start()
+            except RuntimeError:
+                j -= 8
+                continue
             threads.append(t)
-            t.start()
     for thread in threads:
         thread.join()
     print('scan complete')
@@ -42,15 +44,29 @@ class SendThread(threading.Thread):
 
     def run(self):
         while True:
-            message = input(f'{self.client.name}: ')
+            message = input()
             self.client.broadcast(message)
+
+
+def listen_for_peers(client):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+    sock.bind((client.ip, client.port))
+    sock.listen(1)
+
+    while True:
+        connection, address = sock.accept()
+        if address[0] != client.ip:
+            client.peer_list.append(connection)
+            receiver = ReceiveThread(connection, client.name)
+            receiver.start()
 
 
 class Client:
     def __init__(self, ip, port, client_name):
         self.ip = ip
         self.port = port
-        self.peer_list = scan(ip, port, client_name)
+        self.peer_list = []
         self.name = client_name
 
     def broadcast(self, message):
@@ -65,16 +81,11 @@ class Client:
         send = SendThread(self)
         send.start()
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        T = threading.Thread(target=listen_for_peers, args=(self,))
+        T.start()
 
-        sock.bind((self.ip, self.port))
-        sock.listen(1)
-
-        while True:
-            connection, address = sock.accept()
-            self.peer_list.append(connection)
-            receiver = ReceiveThread(connection, self.name)
-            receiver.start()
+        self.peer_list += scan(self.ip, self.port, self.name)
+        print(f'{self.name}: ', end='')
 
 
 class ReceiveThread(threading.Thread):
@@ -86,10 +97,7 @@ class ReceiveThread(threading.Thread):
     def run(self):
         while True:
             message = self.connection.recv(1024).decode()
-            if message:
-                print(f'\r{message}\n{self.name}: ', end='')
-            else:
-                print('error')
+            print(f'\r{message}\n{self.name}: ', end='')
 
 
 def get_host_ip():
