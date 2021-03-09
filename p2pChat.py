@@ -62,9 +62,13 @@ class Client:
 
     def broadcast(self, message):
         for peer in self.peer_list:
-            peer.sendall(f'{self.name}: {message}'.encode())
+            try:
+                peer.sendall(f'{self.name}: {message}\n'.encode())
+            except:
+                self.peer_list.remove(peer)
 
     def start(self):
+        print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
         for peer in self.peer_list:
             receiver = ReceiveThread(peer, self.name)
             receiver.start()
@@ -76,7 +80,6 @@ class Client:
 
         sock.bind((self.ip, self.port))
         sock.listen(1)
-        print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
         while True:
             connection, address = sock.accept()
             self.peer_list.append(connection)
@@ -96,7 +99,7 @@ class ReceiveThread(threading.Thread):
                 message = self.connection.recv(1024).decode()
                 if len(message) < 1:
                     return
-                print(f'\r{message}\n{self.name}: ', end='')
+                print(f'\r{message}{self.name}: ', end='')
             except ConnectionResetError:
                 return
 
