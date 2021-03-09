@@ -2,6 +2,7 @@ import socket
 import threading
 import sys
 import re
+import os
 
 
 def scan(host_ip, port, host_name):
@@ -12,8 +13,6 @@ def scan(host_ip, port, host_name):
     def __do_scan(first_three, start):
         for k in range(start, start + 15):
             if f'{first_three}.{k}' == host_ip:
-                continue
-            elif f'{first_three}.{k}' == '10.200.1.122':
                 continue
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -45,8 +44,13 @@ class SendThread(threading.Thread):
 
     def run(self):
         while True:
-            message = input(f'{self.client.name}: ')
-            self.client.broadcast(message)
+            message = input()
+            if message == '\\q':
+                print('Goodbye!')
+                os._exit(0)
+            else:
+                self.client.broadcast(message)
+                print(f'\r{self.client.name}: ', end='')
 
 
 class Client:
@@ -72,7 +76,7 @@ class Client:
 
         sock.bind((self.ip, self.port))
         sock.listen(1)
-
+        print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
         while True:
             connection, address = sock.accept()
             self.peer_list.append(connection)
@@ -106,7 +110,7 @@ def get_host_ip():
 
 
 def __main__():
-    port = 50001
+    port = 42069
 
     name = input("Enter name: ")
     try:
