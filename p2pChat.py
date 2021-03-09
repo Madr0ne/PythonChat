@@ -1,8 +1,6 @@
 import socket
 import threading
 import sys
-import time
-from random import randint
 import re
 
 
@@ -13,6 +11,11 @@ def scan(host_ip, port, host_name):
 
     def __do_scan(first_three, start):
         for k in range(start, start + 15):
+            if f'{first_three}.{k}' == host_ip:
+                continue
+            elif f'{first_three}.{k}' == '10.200.1.122':
+                continue
+
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             sock.settimeout(0.05)
@@ -85,11 +88,13 @@ class ReceiveThread(threading.Thread):
 
     def run(self):
         while True:
-            message = self.connection.recv(1024).decode()
-            if message:
+            try:
+                message = self.connection.recv(1024).decode()
+                if len(message) < 1:
+                    return
                 print(f'\r{message}\n{self.name}: ', end='')
-            else:
-                print('error')
+            except ConnectionResetError:
+                return
 
 
 def get_host_ip():
