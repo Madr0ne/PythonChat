@@ -77,37 +77,57 @@ class SendThread(threading.Thread):
                 print(f'\r{self.client.name}: ', end='')
 
 
+# Every peer is an instance of the Client class, which handles sending and receiving messages to other peers,
+# as well as being able to accept connections for new clients joining the chat room
 class Client:
     def __init__(self, ip, port, client_name):
+        # ip        - the local host IP address
+        # port      - the port number the chat room operates on
+        # peer_list - a list of connections to the other clients on the chat room
+        # name      - the user's chosen username
         self.ip = ip
         self.port = port
         self.peer_list = scan(ip, port, client_name)
         self.name = client_name
 
+    # Method to send messages to all the other connected peers
     def broadcast(self, message):
+        # Iterate through the list of connections from the peers, and send the message to them in turn
         for peer in self.peer_list:
             try:
+                # If the message is a connect or disconnect message, they take a different format
                 if message == f'{self.name} has entered the chat.' or message == f'{self.name} has left the chat.':
                     peer.sendall(f'{message}\n'.encode())
+                # All other messages take the format 'username: message'
                 else:
                     peer.sendall(f'{self.name}: {message}\n'.encode())
+            # If the peer is available to accept a message, remove them from the list of connections
             except:
                 self.peer_list.remove(peer)
 
+    # The method performs the formalities when first joining the chat room
+    # It continues by always listening for new connections
     def start(self):
+        # Broadcast the connect message to the other clients and welcomes the user to the chat room
         self.broadcast(f'{self.name} has entered the chat.')
         print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
+
+        # Create a thread to listen for incoming messages for each peer in the list of connections
         for peer in self.peer_list:
             receiver = ReceiveThread(peer, self.name)
             receiver.start()
 
+        # Create a thread to accept user input and later send the message to the other peers
         send = SendThread(self)
         send.start()
 
+        # Create a TCP socket on the port number to actively listen for new clients joining the chat room
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
         sock.bind((self.ip, self.port))
         sock.listen(1)
+
+        # Listen for new connections indefinitely.
+        # When a new client attempts to connect, add them to the list of connections
         while True:
             connection, address = sock.accept()
             self.peer_list.append(connection)
@@ -132,7 +152,12 @@ class ReceiveThread(threading.Thread):
                 return
 
 
+# Method to determine the local host IP address that works on both macOS and Windows
+# The default function to get the local host IP doesn't work; it returns the loopback address 127.0.0.1 on macOS
 def get_host_ip():
+    # Create a UDP socket and attempt to connect to 8.8.8.8 (Google's DNS server)
+    # It will attempt to connect to the internet network
+    # getsockname() will returns the socket's own address, which should be the local host address
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(("8.8.8.8", 80))
     ip = s.getsockname()[0]
