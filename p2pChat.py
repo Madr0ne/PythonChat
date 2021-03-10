@@ -21,11 +21,10 @@ def scan(host_ip, port, host_name):
 
             if not sock.connect_ex((f'{first_three}.{k}', port)):
                 sock.settimeout(None)
-                sock.sendall(f'{host_name} has joined the chat'.encode())
                 con_list.append(sock)
         return
 
-    print('beginning scan')
+    print('Beginning network scan...')
     for i in range(255):
         for j in range(0, 256, 16):
             t = threading.Thread(target=__do_scan, args=(f'{network_address}.{i}', j))
@@ -33,7 +32,7 @@ def scan(host_ip, port, host_name):
             t.start()
     for thread in threads:
         thread.join()
-    print('scan complete')
+    print('Scan complete.')
     return con_list
 
 
@@ -46,6 +45,7 @@ class SendThread(threading.Thread):
         while True:
             message = input()
             if message == '\\q':
+                self.client.broadcast(f'{self.client.name} has left the chat.')
                 print('Goodbye!')
                 os._exit(0)
             else:
@@ -63,11 +63,15 @@ class Client:
     def broadcast(self, message):
         for peer in self.peer_list:
             try:
-                peer.sendall(f'{self.name}: {message}\n'.encode())
+                if message == f'{self.name} has entered the chat.' or message == f'{self.name} has left the chat.':
+                    peer.sendall(f'{message}\n'.encode())
+                else:
+                    peer.sendall(f'{self.name}: {message}\n'.encode())
             except:
                 self.peer_list.remove(peer)
 
     def start(self):
+        self.broadcast(f'{self.name} has entered the chat.')
         print(f'Welcome to the chat room! To quit, type \\q.\n{self.name}: ', end='')
         for peer in self.peer_list:
             receiver = ReceiveThread(peer, self.name)
@@ -115,7 +119,7 @@ def get_host_ip():
 def __main__():
     port = 42069
 
-    name = input("Enter name: ")
+    name = input("Enter a name to chat: ")
     try:
         client = Client(get_host_ip(), port, name)
         client.start()
